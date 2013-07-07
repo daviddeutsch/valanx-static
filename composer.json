@@ -1,0 +1,13 @@
+{
+	"name" : "valanx/valanx-static",
+	"keywords" : [],
+	"require" : {
+		"leafo/lessphp" : "0.3.9",
+		"php" : ">=5.3"
+	},
+	"autoload" : {
+		"psr-0" : {
+			"Valanx" : "src"
+		}
+	}
+}
