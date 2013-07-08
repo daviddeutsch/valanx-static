@@ -1,5 +1,6 @@
 {
 	"label": "Sleek, intuitive, and powerful front-end framework for faster and easier web development.",
 	"author-url": "http://twitter.github.io/",
-	"version": "2.3.1"
+	"version": "2.3.1",
+	"type":"joomla-library-media"
 }
