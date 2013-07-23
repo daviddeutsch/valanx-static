@@ -2,5 +2,5 @@
 	"label": "Pixel-perfect cross-browser loading icons through Canvas.",
 	"author-url": "http://github.com/staaky/spinners",
 	"version": "3.0.0",
-	"type":"joomla-library-media"
+	"type":"joomla-asset"
 }
