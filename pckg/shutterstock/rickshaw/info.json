@@ -2,5 +2,5 @@
 	"label": "Rickshaw is a JavaScript toolkit for creating interactive time series graphs.",
 	"author-url": "http://code.shutterstock.com/rickshaw/",
 	"version": "1.2.0",
-	"type":"joomla-asset"
+	"type":"asset"
 }
