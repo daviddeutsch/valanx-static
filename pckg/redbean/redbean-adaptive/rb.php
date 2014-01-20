@@ -10727,15 +10727,15 @@ class RedBean_Pipeline
 	/**
 	 * @param $bean \RedBean_OODBBean
 	 */
-	public static function add( $bean )
+	public static function add( $bean, $path, $type )
 	{
 		self::emit(
 			self::$r->_(
 				'update',
 				array(
 					'operation' => 'add',
-					'path' => $bean->getMeta('type') . '/' . $bean->id,
-					'type' => $bean->getMeta('type'),
+					'path' => $path,
+					'type' => $type,
 					'objectid' => $bean->id,
 					'object' => json_encode( $bean->export() ),
 					'created' => self::$r->isoDateTime()
@@ -10748,7 +10748,7 @@ class RedBean_Pipeline
 	/**
 	 * @param $bean \RedBean_OODBBean
 	 */
-	public static function update( $bean )
+	public static function update( $bean, $path, $type )
 	{
 		$changes = $bean->getMeta('sys.changes');
 
@@ -10759,8 +10759,8 @@ class RedBean_Pipeline
 				'update',
 				array(
 					'operation' => 'update',
-					'path' => $bean->getMeta('type') . '/' . $bean->id,
-					'type' => $bean->getMeta('type'),
+					'path' => $path,
+					'type' => $type,
 					'objectid' => $bean->id,
 					'object' => json_encode( $bean->export() ),
 					'created' => self::$r->isoDateTime()
@@ -10773,15 +10773,15 @@ class RedBean_Pipeline
 	/**
 	 * @param $bean \RedBean_OODBBean
 	 */
-	public static function delete( $bean )
+	public static function delete( $bean, $path, $type )
 	{
 		self::emit(
 			self::$r->_(
 				'update',
 				array(
 					'operation' => 'remove',
-					'path' => $bean->getMeta('type') . '/' . $bean->id,
-					'type' => $bean->getMeta('type'),
+					'path' => $path,
+					'type' => $type,
 					'objectid' => $bean->id,
 					'object' => json_encode( $bean->export() ),
 					'created' => self::$r->isoDateTime()
@@ -10790,6 +10790,7 @@ class RedBean_Pipeline
 			)
 		);
 	}
+
 }
 
 
@@ -10805,15 +10806,37 @@ class RedBean_PipelineModel extends RedBean_SimpleModel
 	public function after_update()
 	{
 		if ( $this->existing ) {
-			RedBean_Pipeline::update($this->bean);
+			RedBean_Pipeline::update(
+				$this->bean,
+				$this->makePath($this->bean),
+				$this->makeType($this->bean)
+			);
 		} else {
-			RedBean_Pipeline::add($this->bean);
+			RedBean_Pipeline::add(
+				$this->bean,
+				$this->makePath($this->bean),
+				$this->makeType($this->bean)
+			);
 		}
 	}
 
 	public function delete()
 	{
-		RedBean_Pipeline::delete($this->bean);
+		RedBean_Pipeline::delete(
+			$this->bean,
+			$this->makePath($this->bean),
+			$this->makeType($this->bean)
+		);
+	}
+
+	protected function makePath( $bean )
+	{
+		return $bean->getMeta('type') . '/' . $bean->id;
+	}
+
+	protected function makeType( $bean )
+	{
+		return $bean->getMeta('type');
 	}
 }
 
@@ -12797,7 +12820,3 @@ class RedBean_DuplicationManager
 	}
 }
 
-
-class R extends RedBean_Facade{
-  
-}
