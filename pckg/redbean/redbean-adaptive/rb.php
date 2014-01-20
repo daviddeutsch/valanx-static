@@ -1426,7 +1426,12 @@ class RedBean_OODBBean implements IteratorAggregate, ArrayAccess, Countable
 			$value = $value->format( 'Y-m-d H:i:s' );
 		}
 
-		$this->addChange($property, $this->properties[$property], $value);
+		if ( isset($this->properties[$property]) ) {
+			$this->addChange($property, $this->properties[$property], $value);
+		} else {
+			$this->addChange($property, '', $value);
+		}
+
 
 		$this->properties[$property] = $value;
 	}
@@ -10814,14 +10819,14 @@ class RedBean_Pipeline
 	 */
 	private static $r;
 
-	public static function configureWithInstance( $instance )
+	public static function configureWithInstance( $instance, $prefix=null )
 	{
 		// Cheap trick to avoid recursive bs right now
 		if ( !empty(self::$r) ) return;
 
 		self::$r = clone $instance;
 
-		self::$r->prefix('sys_pipeline_');
+		self::$r->prefix($prefix . 'sys_pipeline_');
 	}
 
 	public static function addSubscriber( $details )
