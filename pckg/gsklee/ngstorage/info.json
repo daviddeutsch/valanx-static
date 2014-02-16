@@ -1,0 +1,6 @@
+{
+	"label": "An AngularJS module that makes Web Storage working in the Angular Way.",
+	"author-url":"https://github.com/gsklee/ngStorage",
+	"version": "0.3.0",
+	"type":"asset"
+}
