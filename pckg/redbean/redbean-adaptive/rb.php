@@ -11045,20 +11045,7 @@ class RedBean_Pipeline
 	 */
 	public static function add( $bean, $path, $type )
 	{
-		self::emit(
-			self::$r->_(
-				'update',
-				array(
-					'operation' => 'add',
-					'path' => $path,
-					'type' => $type,
-					'objectid' => $bean->id,
-					'object' => json_encode( $bean->export() ),
-					'created' => self::$r->isoDateTime()
-				),
-				true
-			)
-		);
+		self::emit( self::makeUpdate($bean, $path, $type, 'add') );
 	}
 
 	/**
@@ -11070,20 +11057,7 @@ class RedBean_Pipeline
 
 		if ( empty($changes) ) return;
 
-		self::emit(
-			self::$r->_(
-				'update',
-				array(
-					'operation' => 'update',
-					'path' => $path,
-					'type' => $type,
-					'objectid' => $bean->id,
-					'object' => json_encode( $bean->export() ),
-					'created' => self::$r->isoDateTime()
-				),
-				true
-			)
-		);
+		self::emit( self::makeUpdate($bean, $path, $type, 'update') );
 	}
 
 	/**
@@ -11091,19 +11065,25 @@ class RedBean_Pipeline
 	 */
 	public static function delete( $bean, $path, $type )
 	{
-		self::emit(
-			self::$r->_(
-				'update',
-				array(
-					'operation' => 'remove',
-					'path' => $path,
-					'type' => $type,
-					'objectid' => $bean->id,
-					'object' => json_encode( $bean->export() ),
-					'created' => self::$r->isoDateTime()
-				),
-				true
-			)
+		self::emit( self::makeUpdate($bean, $path, $type, 'remove') );
+	}
+
+	private static function makeUpdate( $bean, $path, $type, $operation )
+	{
+		$json = json_encode( $bean->export() );
+
+		return self::$r->_(
+			'update',
+			array(
+				'operation' => $operation,
+				'path' => $path,
+				'type' => $type,
+				'objectid' => $bean->id,
+				'object' => $json,
+				'created' => self::$r->isoDateTime(),
+				'hash'  => sha1($json)
+			),
+			true
 		);
 	}
 
@@ -11612,6 +11592,12 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 		}
 
 		$path = explode( '/', $path );
+
+		if ( (count( $path ) < 2) && isset($data->id) ) {
+			$path[] = $data->id;
+
+			unset($data->id);
+		}
 
 		if ( count( $path ) < 2 ) {
 			return $this->handleRESTPutRequest( implode('/', $path), $data );
