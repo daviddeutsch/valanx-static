@@ -2,5 +2,5 @@
 	"label": "Octobinder - One binder to bind AngularJS models to everything.",
 	"version": "1.0",
     "type": "asset",
-	"license":   "MIT"
+	"license": "MIT"
 }
