@@ -10825,6 +10825,8 @@ class RedBean_Pipeline
 	 */
 	private static $r;
 
+	private static $subscriber;
+
 	public static function configureWithInstance( $instance, $prefix=null )
 	{
 		// Cheap trick to avoid recursive bs right now
@@ -10833,6 +10835,11 @@ class RedBean_Pipeline
 		self::$r = clone $instance;
 
 		self::$r->prefix($prefix . 'rsys_');
+	}
+
+	public static function setSubscriber( $subscriber )
+	{
+		self::$subscriber = $subscriber;
 	}
 
 	public static function addSubscriber( $details )
@@ -10845,9 +10852,10 @@ class RedBean_Pipeline
 			}
 		}
 
-		$expiration = 0;
 		if ( !empty($details->lease_seconds) ) {
 			$expiration = time() + $details->lease_seconds;
+		} else {
+			$expiration = time() + 86400;
 		}
 
 		return self::$r->_(
@@ -10898,6 +10906,8 @@ class RedBean_Pipeline
 			$updates = array($updates);
 		}
 
+		self::$r->unassociate($subscriber, $updates);
+
 		$output = array();
 		foreach ( $updates as $update ) {
 			$data = $update->export();
@@ -10909,8 +10919,6 @@ class RedBean_Pipeline
 			$data->object->id = (int) $data->object->id;
 
 			$output[] = $data;
-
-			self::$r->unassociate($subscriber, $update);
 		}
 
 		return $output;
@@ -11015,6 +11023,11 @@ class RedBean_Pipeline
 		if ( empty($subscribers) ) return;
 
 		foreach( $subscribers as $subscriber ) {
+			// Don't update the subscriber making the call
+			if ( !empty(self::$subscriber) ) {
+				if ( $subscriber->name == self::$subscriber ) continue;
+			}
+
 			if ( empty($subscriber->callback) ) {
 				// No callback, so this will be stashed for retrieval by the subscriber
 				self::$r->associate($subscriber, $update);
@@ -11086,7 +11099,6 @@ class RedBean_Pipeline
 			true
 		);
 	}
-
 }
 
 
@@ -11097,17 +11109,9 @@ class RedBean_PipelineAssociationModel extends RedBean_SimpleModel
 		$paths = $this->makePath($this->bean);
 		$types = $this->makeType($this->bean);
 
-		RedBean_Pipeline::add(
-			$this->bean,
-			$paths[0],
-			$types[0]
-		);
-
-		RedBean_Pipeline::add(
-			$this->bean,
-			$paths[1],
-			$types[1]
-		);
+		foreach ( $paths as $i => $path ) {
+			RedBean_Pipeline::add($this->bean, $path, $types[$i]);
+		}
 	}
 
 	public function delete()
@@ -11115,17 +11119,9 @@ class RedBean_PipelineAssociationModel extends RedBean_SimpleModel
 		$paths = $this->makePath($this->bean);
 		$types = $this->makeType($this->bean);
 
-		RedBean_Pipeline::delete(
-			$this->bean,
-			$paths[0],
-			$types[0]
-		);
-
-		RedBean_Pipeline::delete(
-			$this->bean,
-			$paths[1],
-			$types[1]
-		);
+		foreach ( $paths as $i => $path ) {
+			RedBean_Pipeline::delete($this->bean, $path, $types[$i]);
+		}
 	}
 
 	protected function makePath( $bean )
@@ -11145,9 +11141,12 @@ class RedBean_PipelineAssociationModel extends RedBean_SimpleModel
 	{
 		$objects = explode('_', $bean->getMeta('type'));
 
+		$oneid = $objects[0].'_id';
+		$twoid = $objects[1].'_id';
+
 		return array(
-			$objects[0] . '/' . $objects[1],
-			$objects[1] . '/' . $objects[0]
+			$objects[0] . '/' . $bean->$oneid . '/' . $objects[1],
+			$objects[1] . '/' . $bean->$twoid . '/' . $objects[0]
 		);
 	}
 }
@@ -11203,8 +11202,6 @@ class RedBean_PipelineModel extends RedBean_SimpleModel
 interface RedBean_Plugin
 {
 }
-
-;
 
 
 class RedBean_Plugin_BeanCan implements RedBean_Plugin
@@ -11531,7 +11528,7 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 	 * @param string $path   RESTFul path to resource (or resource type)
 	 * @param object $path   Data to write to resource (or to create as new resource)
 	 *
-	 * @return string $json a JSON encoded response ready for sending to client
+	 * @return int|array|RedBean_OODBBean
 	 */
 	public function handleRESTRequest( $method, $path, $data=array() )
 	{
@@ -11550,7 +11547,7 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 	 *
 	 * @param string $path RESTFul path to resource
 	 *
-	 * @return string $json a JSON encoded response ready for sending to client
+	 * @return array|RedBean_OODBBean one or an array of beans
 	 */
 	public function handleRESTGetRequest( $path )
 	{
@@ -11564,11 +11561,11 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 
 		try {
 			if ( count( $resourceInfo ) < 2 ) {
-				return $this->instance->findAndExport( $type );
+				return $this->instance->findAll( $type );
 			} else {
 				$id = (int) $resourceInfo[1];
 
-				return $this->instance->load( $type, $id )->export();
+				return $this->instance->load( $type, $id );
 			}
 		} catch ( Exception $exception ) {
 			return null;
@@ -11583,7 +11580,7 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 	 * @param string $path RESTFul path to resource
 	 * @param object $data Data to write to the object
 	 *
-	 * @return string $json a JSON encoded response ready for sending to client
+	 * @return int ID of the stored object
 	 */
 	public function handleRESTPostRequest( $path, $data )
 	{
@@ -11622,7 +11619,7 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 	 * @param string $path RESTFul path to resource
 	 * @param object $data Data to write to the object
 	 *
-	 * @return string $json a JSON encoded response ready for sending to client
+	 * @return int ID of the stored object
 	 */
 	public function handleRESTPutRequest( $path, $data )
 	{
@@ -11654,7 +11651,7 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 	 *
 	 * @param string $path RESTFul path to resource
 	 *
-	 * @return string $json a JSON encoded response ready for sending to client
+	 * @return int ID of the stored object
 	 */
 	public function handleRESTDeleteRequest( $path )
 	{
@@ -11671,7 +11668,7 @@ class RedBean_Plugin_BeanCan implements RedBean_Plugin
 
 			$this->instance->trash( $bean );
 
-			return null;
+			return $path[1];
 		} catch ( Exception $exception ) {
 			return null;
 		}
