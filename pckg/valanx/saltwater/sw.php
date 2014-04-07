@@ -3,7 +3,7 @@
 /**
  * Saltwater
  *
- * @license GNU GPL v3 or later
+ * @license GNU GPL v3
  *
  * copyright (c) 2014 David Deutsch
  */
