@@ -38,11 +38,13 @@ class Saltwater_Server
 
 		self::db();
 
-		self::$log = new Saltwater_Logger();
+		self::$log = new Logger();
 
-		self::$route = new Saltwater_Router($context, $uri);
+		self::pushContext($context);
 
-		self::$route->verify($context);
+		self::$route = new Router($uri);
+
+		$context->verifyRoute();
 	}
 
 	public static function route()
@@ -102,6 +104,10 @@ class Saltwater_Server
 		}
 
 		self::$r->selectDatabase($cfg->name);
+
+		if ( !empty($cfg->prefix) ) {
+			self::$r->prefix($cfg->prefix);
+		}
 
 		self::$r->redbean->beanhelper->setModelFormatter(
 			new Saltwater_ModelFormatter
@@ -199,7 +205,7 @@ class Saltwater_Router
 
 	public $chain = array();
 
-	public function __construct( $root_context, $uri=null )
+	public function __construct( $uri=null )
 	{
 		if ( empty($uri) ) {
 			$this->uri = $this->getURI();
@@ -209,14 +215,7 @@ class Saltwater_Router
 
 		$this->http = strtolower($_SERVER['REQUEST_METHOD']);
 
-		S::pushContext($root_context);
-
-		$this->explode( $root_context, $this->http, explode('/', $this->uri) );
-	}
-
-	public function verify($root_context)
-	{
-		$root_context->verifyRoute();
+		$this->explode( S::$context[0], $this->http, explode('/', $this->uri) );
 	}
 
 	protected function getURI()
@@ -498,9 +497,9 @@ class Saltwater_Context_Root extends Saltwater_Context_Context
 	public $root = true;
 }
 
-class Saltwater_Model extends RedBean_PipelineModel {}
+class Saltwater_Model_Model extends RedBean_PipelineModel {}
 
-class Saltwater_AssociationModel extends RedBean_PipelineAssociationModel {}
+class Saltwater_Model_AssociationModel extends RedBean_PipelineAssociationModel {}
 
 class Saltwater_Log extends Saltwater_Model {}
 
